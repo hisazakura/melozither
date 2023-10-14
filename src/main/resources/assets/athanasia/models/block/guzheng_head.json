@@ -1,0 +1,140 @@
+{
+	"credit": "Made with Blockbench",
+	"textures": {
+		"0": "minecraft:block/oak_planks",
+		"1": "minecraft:block/dark_oak_planks",
+		"4": "athanasia:block/guzheng/string",
+		"particle": "minecraft:block/oak_planks"
+	},
+	"elements": [
+		{
+			"from": [0, 0, 4],
+			"to": [16, 2, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 16, 2], "texture": "#0"},
+				"east": {"uv": [0, 0, 8, 2], "texture": "#0"},
+				"south": {"uv": [0, 0, 16, 2], "texture": "#0"},
+				"west": {"uv": [0, 0, 8, 2], "texture": "#0"},
+				"up": {"uv": [0, 0, 8, 16], "rotation": 270, "texture": "#0"},
+				"down": {"uv": [0, 0, 8, 16], "rotation": 90, "texture": "#0"}
+			}
+		},
+		{
+			"from": [3, 3, 4],
+			"to": [16, 3, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 13, 0], "texture": "#4"},
+				"east": {"uv": [0, 0, 8, 0], "texture": "#4"},
+				"south": {"uv": [0, 0, 13, 0], "texture": "#4"},
+				"west": {"uv": [0, 0, 8, 0], "texture": "#4"},
+				"up": {"uv": [8, 13, 0, 0], "rotation": 270, "texture": "#4"},
+				"down": {"uv": [8, 0, 0, 13], "rotation": 90, "texture": "#4"}
+			}
+		},
+		{
+			"from": [0, 2, 4],
+			"to": [3, 3, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 3, 1], "texture": "#1"},
+				"east": {"uv": [8, 4, 16, 5], "texture": "#1"},
+				"south": {"uv": [0, 0, 3, 1], "texture": "#1"},
+				"west": {"uv": [8, 3, 16, 4], "texture": "#1"},
+				"up": {"uv": [0, 3, 8, 6], "rotation": 270, "texture": "#1"},
+				"down": {"uv": [0, 3, 8, 6], "rotation": 90, "texture": "#1"}
+			}
+		},
+		{
+			"from": [3, 2, 8],
+			"to": [7, 3, 12],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [7, 4, 11, 5], "texture": "#1"},
+				"east": {"uv": [8, 3, 12, 4], "texture": "#1"},
+				"south": {"uv": [4, 4, 8, 5], "texture": "#1"},
+				"west": {"uv": [8, 3, 12, 4], "texture": "#1"},
+				"up": {"uv": [0, 4, 4, 8], "rotation": 270, "texture": "#1"},
+				"down": {"uv": [0, 4, 4, 8], "rotation": 90, "texture": "#1"}
+			}
+		},
+		{
+			"from": [11, 2, 4],
+			"to": [11.5, 2.99, 4.5],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"east": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"south": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"west": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"up": {"uv": [0, 0, 0.5, 0.5], "rotation": 270, "texture": "#1"},
+				"down": {"uv": [0, 0, 0.5, 0.5], "rotation": 90, "texture": "#1"}
+			}
+		},
+		{
+			"from": [13, 2, 5],
+			"to": [13.5, 2.99, 5.5],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"east": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"south": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"west": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"up": {"uv": [0, 0, 0.5, 0.5], "rotation": 270, "texture": "#1"},
+				"down": {"uv": [0, 0, 0.5, 0.5], "rotation": 90, "texture": "#1"}
+			}
+		},
+		{
+			"from": [15, 2, 6],
+			"to": [15.5, 2.99, 6.5],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.5, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"east": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"south": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"west": {"uv": [0, 0, 0.5, 0.99], "texture": "#1"},
+				"up": {"uv": [0, 0, 0.5, 0.5], "rotation": 270, "texture": "#1"},
+				"down": {"uv": [0, 0, 0.5, 0.5], "rotation": 90, "texture": "#1"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "parent",
+			"origin": [8, 8, 8],
+			"color": 0,
+			"boneType": "",
+			"children": [
+				{
+					"name": "body",
+					"origin": [8, 8, 8],
+					"color": 0,
+					"boneType": "",
+					"children": [0]
+				},
+				{
+					"name": "string",
+					"origin": [8, 8, 8],
+					"color": 0,
+					"boneType": "",
+					"children": [1]
+				},
+				{
+					"name": "upper",
+					"origin": [8, 8, 8],
+					"color": 0,
+					"boneType": "",
+					"children": [2, 3]
+				},
+				{
+					"name": "bridge",
+					"origin": [8, 8, 8],
+					"color": 0,
+					"boneType": "",
+					"children": [4, 5, 6]
+				}
+			]
+		}
+	]
+}

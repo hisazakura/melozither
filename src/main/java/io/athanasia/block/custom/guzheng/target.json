@@ -1,0 +1,18 @@
+{
+	"0": [
+		{
+			"sound": "guzheng:guzheng.pluck4",
+			"pitch": 1.189
+		},
+		{
+			"sound": "guzheng:guzheng.pluck2",
+			"pitch": 1.587
+		}
+	],
+	"8": [
+		{
+			"sound": "guzheng:guzheng.pluck4",
+			"pitch": 1
+		}
+	]
+}

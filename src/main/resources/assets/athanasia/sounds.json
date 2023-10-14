@@ -1,0 +1,20 @@
+{
+	"guzheng_pluck1": {
+		"subtitle": "sounds.athanasia.guzheng_pluck1",
+		"sounds": [
+			"athanasia:guzheng/guzheng2"
+		]
+	},
+	"guzheng_pluck2": {
+		"subtitle": "sounds.athanasia.guzheng_pluck2",
+		"sounds": [
+			"athanasia:guzheng/guzheng4"
+		]
+	},
+	"guzheng_pluck3": {
+		"subtitle": "sounds.athanasia.guzheng_pluck3",
+		"sounds": [
+			"athanasia:guzheng/guzheng6"
+		]
+	}
+}
