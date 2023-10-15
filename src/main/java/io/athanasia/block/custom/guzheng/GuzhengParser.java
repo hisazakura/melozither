@@ -40,7 +40,6 @@ public class GuzhengParser {
 	}};
 
 	public static GuzhengSongData parse(String script) {
-		// HashMap<Integer, List<GuzhengSoundData>> parsedScript = new HashMap<Integer, List<GuzhengSoundData>>();
 		GuzhengSongData songData = new GuzhengSongData();
 
 		int tick = 0;

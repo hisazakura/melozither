@@ -16,6 +16,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public class GuzhengBlockEntity extends BlockEntity {
+	// default script
 	public String SCRIPT = "<8>[la]kj [ls]kj [la]k[js]g[hd]j[kd] [la]kj [ls]kj [la]k[js] [kd]   [fb]g[ha]j[ld]kl [ls]kl [la];[;s]e[;d]lk [la]kj [ls]kj [la]k[js]g[hd]j[ha]";
 	public GuzhengSongData parsedScript = GuzhengParser.parse(this.SCRIPT);
 	public int TICK_COUNT = -1;
@@ -81,11 +82,10 @@ public class GuzhengBlockEntity extends BlockEntity {
 					blockPos1.getX() + Math.random(),
 					blockPos1.getY() + Math.random(),
 					blockPos1.getZ() + Math.random());
-		else
-			return new Vec3d(
-					blockPos2.getX() + Math.random(),
-					blockPos2.getY() + Math.random(),
-					blockPos2.getZ() + Math.random());
+		return new Vec3d(
+				blockPos2.getX() + Math.random(),
+				blockPos2.getY() + Math.random(),
+				blockPos2.getZ() + Math.random());
 	}
 
 	public static <E extends BlockEntity> void tick(World world, BlockPos blockPos, BlockState blockState, E entity) {

@@ -1,6 +1,6 @@
 package io.athanasia.block;
 
-import io.athanasia.Athanasia;
+import io.athanasia.MeloZither;
 import io.athanasia.block.custom.guzheng.GuzhengBlockEntity;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.block.entity.BlockEntityType;
@@ -10,10 +10,10 @@ import net.minecraft.util.Identifier;
 
 public class ModBlockEntities {
 	public static final BlockEntityType<GuzhengBlockEntity> GUZHENG_BLOCK_ENTITY = Registry
-			.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(Athanasia.MOD_ID, "guzheng"),
+			.register(Registries.BLOCK_ENTITY_TYPE, new Identifier(MeloZither.MOD_ID, "guzheng"),
 			FabricBlockEntityTypeBuilder.create(GuzhengBlockEntity::new, ModBlocks.GUZHENG_BLOCK).build(null));
 
 	public static void register() {
-		Athanasia.LOGGER.info("Registering block entities for " + Athanasia.MOD_ID);
+		return;
 	}
 }

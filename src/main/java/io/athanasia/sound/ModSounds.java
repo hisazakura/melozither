@@ -1,6 +1,6 @@
 package io.athanasia.sound;
 
-import io.athanasia.Athanasia;
+import io.athanasia.MeloZither;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.sound.SoundEvent;
@@ -12,11 +12,11 @@ public class ModSounds {
 	public static final SoundEvent GUZHENG_PLUCK3 = registerSoundEvent("guzheng_pluck3");
 
 	private static SoundEvent registerSoundEvent(String name) {
-		Identifier id = new Identifier(Athanasia.MOD_ID, name);
+		Identifier id = new Identifier(MeloZither.MOD_ID, name);
 		return Registry.register(Registries.SOUND_EVENT, id, SoundEvent.of(id));
 	}
 
 	public static void register() {
-		Athanasia.LOGGER.info("Registering blocks for " + Athanasia.MOD_ID);
+		MeloZither.LOGGER.info("Registering blocks for " + MeloZither.MOD_ID);
 	}
 }

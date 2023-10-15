@@ -5,20 +5,15 @@ import org.slf4j.LoggerFactory;
 
 import io.athanasia.block.ModBlockEntities;
 import io.athanasia.block.ModBlocks;
-import io.athanasia.item.ModItemGroups;
-import io.athanasia.item.ModItems;
 import io.athanasia.sound.ModSounds;
 import net.fabricmc.api.ModInitializer;
 
-public class Athanasia implements ModInitializer{
-	public static final String MOD_ID = "athanasia";
-	public static final Logger LOGGER = LoggerFactory.getLogger("Athanasia");
+public class MeloZither implements ModInitializer{
+	public static final String MOD_ID = "melozither";
+	public static final Logger LOGGER = LoggerFactory.getLogger("MeloZither");
 
 	@Override
 	public void onInitialize() {
-		ModItemGroups.register();
-
-		ModItems.register();
 		ModBlocks.register();
 		ModBlockEntities.register();
 		ModSounds.register();
