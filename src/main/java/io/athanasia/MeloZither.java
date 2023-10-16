@@ -18,6 +18,6 @@ public class MeloZither implements ModInitializer{
 		ModBlockEntities.register();
 		ModSounds.register();
 		
-		LOGGER.info("Athanasia initialized!");
+		LOGGER.info("MeloZither initialized!");
 	}
 }

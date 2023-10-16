@@ -22,7 +22,7 @@ loom {
     splitEnvironmentSourceSets()
 
 	mods {
-		"athanasia" {
+		"melozither" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
