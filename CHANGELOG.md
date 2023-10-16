@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3-DEV] - 2023-10-16
+
+- Update Guzheng item model.
+- Added Guzheng loot tables.
+
 ## [0.2-DEV] - 2023-10-16
 
 - Update Guzheng item model.
