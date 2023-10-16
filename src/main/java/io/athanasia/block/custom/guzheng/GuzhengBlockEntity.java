@@ -62,13 +62,11 @@ public class GuzhengBlockEntity extends BlockEntity {
 	}
 
 	public void playScript() {
-		try {
-			GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
-			if (otherBlockEntity.isPlaying)
-				return;
-		} catch (NullPointerException e) {
+		GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
+		if (otherBlockEntity == null)
 			return;
-		}
+		if (otherBlockEntity.isPlaying)
+			return;
 		isPlaying = true;
 	}
 

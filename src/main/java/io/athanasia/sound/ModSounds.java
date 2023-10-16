@@ -17,6 +17,6 @@ public class ModSounds {
 	}
 
 	public static void register() {
-		MeloZither.LOGGER.info("Registering blocks for " + MeloZither.MOD_ID);
+		return;
 	}
 }

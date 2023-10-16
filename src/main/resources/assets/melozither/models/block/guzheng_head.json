@@ -3,7 +3,7 @@
 	"textures": {
 		"0": "minecraft:block/oak_planks",
 		"1": "minecraft:block/dark_oak_planks",
-		"4": "athanasia:block/guzheng/string",
+		"4": "melozither:block/guzheng/string",
 		"particle": "minecraft:block/oak_planks"
 	},
 	"elements": [
