@@ -82,7 +82,8 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 			String script = stringJoiner.toString();
 
 			String err = guzhengBlockEntity.setScript(script);
-			if (err != null) player.sendMessage(Text.literal(err));
+			if (err != null)
+				player.sendMessage(Text.literal(err));
 		}
 
 		guzhengBlockEntity.playScript();
@@ -113,16 +114,14 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 
 	@Override
 	public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-		BlockPos blockPos;
-		BlockState blockState;
-		GuzhengPart guzhengPart;
+		GuzhengPart guzhengPart = state.get(PART);
+		BlockPos blockPos = pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(guzhengPart, state.get(FACING)));
+		BlockState blockState = world.getBlockState(blockPos);
+
 		if (!world.isClient
 				&& player.isCreative()
-				&& (guzhengPart = state.get(PART)) == GuzhengPart.FOOT
-				&& (blockState = world.getBlockState(
-						blockPos = pos
-								.offset(GuzhengBlock.getDirectionTowardsOtherPart(guzhengPart, state.get(FACING)))))
-						.isOf(this)
+				&& guzhengPart == GuzhengPart.FOOT
+				&& blockState.isOf(this)
 				&& blockState.get(PART) == GuzhengPart.HEAD) {
 			world.setBlockState(blockPos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL | Block.SKIP_DROPS);
 			world.syncWorldEvent(player, WorldEvents.BLOCK_BROKEN, blockPos, Block.getRawIdFromState(blockState));

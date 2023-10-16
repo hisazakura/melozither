@@ -16,7 +16,7 @@ import net.minecraft.util.Identifier;
 
 public class ModBlocks {
 	public static final Block GUZHENG_BLOCK = registerBlock("guzheng",
-			new GuzhengBlock(FabricBlockSettings.copyOf(Blocks.OAK_WOOD)));
+			new GuzhengBlock(FabricBlockSettings.copyOf(Blocks.OAK_PLANKS)));
 
 	private static Block registerBlock(String name, Block block) {
 		registerBlockItem(name, block);
