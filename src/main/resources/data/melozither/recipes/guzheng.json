@@ -1,0 +1,20 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"pattern": [
+	  "   ",
+	  "SSS",
+	  "PPP"
+	],
+	"key": {
+	  "P": {
+		"tag": "minecraft:planks"
+	  },
+	  "S": {
+		"item": "minecraft:string"
+	  }
+	},
+	"result": {
+	  "item": "melozither:guzheng",
+	  "count": 1
+	}
+  }
