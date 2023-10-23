@@ -5,11 +5,15 @@ import org.jetbrains.annotations.Nullable;
 import io.athanasia.block.ModBlockEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.state.property.Properties;
+import net.minecraft.text.Style;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
@@ -28,6 +32,11 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 	@Nullable
 	public String setScript(String script) {
+		return setScript(script, null, null);
+	}
+
+	@Nullable
+	public String setScript(String script, @Nullable String title, @Nullable String author) {
 		String previousScript = this.SCRIPT;
 		this.SCRIPT = script;
 		try {
@@ -43,6 +52,10 @@ public class GuzhengBlockEntity extends BlockEntity {
 		} catch (NullPointerException e) {
 			this.SCRIPT = previousScript;
 			return e.getMessage();
+		}
+		if (title != null && author != null) {
+			this.parsedScript.setTitle(title);
+			this.parsedScript.setAuthor(author);
 		}
 
 		markDirty();
@@ -70,6 +83,14 @@ public class GuzhengBlockEntity extends BlockEntity {
 		if (otherBlockEntity.isPlaying)
 			return;
 		isPlaying = true;
+		if (this.parsedScript.getTitle() == null || this.parsedScript.getAuthor() == null)
+			return;
+		for (PlayerEntity player : this.getWorld().getPlayers()) {
+			if (player.squaredDistanceTo(this.getPos().toCenterPos()) <= 16 * 16) {
+				player.sendMessage(Text.translatable("zither.nowPlaying", this.parsedScript.getTitle(),
+						this.parsedScript.getAuthor()).setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
+			}
+		}
 	}
 
 	public void stopScript() {

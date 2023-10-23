@@ -5,7 +5,6 @@ import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
-
 import io.athanasia.block.ModBlockEntities;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
@@ -78,15 +77,27 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 		if (!itemInHand.getItem().equals(Items.AIR) && (itemInHand.getItem().equals(Items.WRITABLE_BOOK)
 				|| itemInHand.getItem().equals(Items.WRITTEN_BOOK))) {
 
-			List<String> pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
-					.map(NbtElement::asString)
-					.collect(Collectors.toList());
+			List<String> pages;
+			if (itemInHand.getItem().equals(Items.WRITABLE_BOOK))
+				pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
+						.map(NbtElement::asString)
+						.collect(Collectors.toList());
+			else
+				pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
+						.map(NbtElement::asString)
+						.map(page -> page.replace("{\"text\":\"", "").replace("\"}", ""))
+						.collect(Collectors.toList());
 
 			StringJoiner stringJoiner = new StringJoiner("");
 			pages.forEach(stringJoiner::add);
 			String script = stringJoiner.toString();
 
-			String err = guzhengBlockEntity.setScript(script);
+			String title = null, author = null;
+			if (itemInHand.getItem().equals(Items.WRITTEN_BOOK)) {
+				title = itemInHand.getNbt().getString("title");
+				author = itemInHand.getNbt().getString("author");
+			}
+			String err = guzhengBlockEntity.setScript(script, title, author);
 			if (err != null)
 				player.sendMessage(Text.literal(err));
 		}
