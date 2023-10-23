@@ -45,6 +45,8 @@ public class GuzhengBlockEntity extends BlockEntity {
 			return e.getMessage();
 		}
 
+		markDirty();
+
 		return null;
 	}
 
@@ -70,8 +72,18 @@ public class GuzhengBlockEntity extends BlockEntity {
 		isPlaying = true;
 	}
 
+	public void stopScript() {
+		this.isPlaying = false;
+		this.TICK_COUNT = -1;
+	}
+
 	public BlockEntityUpdateS2CPacket toUpdatePacket() {
 		return BlockEntityUpdateS2CPacket.create(this);
+	}
+
+	@Override
+	public NbtCompound toInitialChunkDataNbt() {
+		return createNbt();
 	}
 
 	private static Vec3d randomizeLocation(BlockPos blockPos1, BlockPos blockPos2) {
@@ -86,6 +98,17 @@ public class GuzhengBlockEntity extends BlockEntity {
 				blockPos2.getZ() + Math.random());
 	}
 
+	private static void playNote(GuzhengBlockEntity entity, World world, BlockPos blockPos, GuzhengNote note) {
+		world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
+		BlockPos otherBlockPos = entity.getBlockEntityOfOtherPart().getPos();
+		Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
+		world.addParticle(ParticleTypes.NOTE,
+				(double) randomizedLocation.getX(),
+				(double) blockPos.getY() + 0.4,
+				(double) randomizedLocation.getZ(),
+				(double) 1 / 24.0, 0.0, 0.0);
+	}
+
 	public static <E extends BlockEntity> void tick(World world, BlockPos blockPos, BlockState blockState, E entity) {
 		if (!(entity instanceof GuzhengBlockEntity))
 			return;
@@ -95,19 +118,23 @@ public class GuzhengBlockEntity extends BlockEntity {
 			return;
 
 		for (GuzhengNote note : guzhengBlockEntity.parsedScript.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
-			world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
-			BlockPos otherBlockPos = guzhengBlockEntity.getBlockEntityOfOtherPart().getPos();
-			Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
-			world.addParticle(ParticleTypes.NOTE,
-					(double) randomizedLocation.getX(),
-					(double) blockPos.getY() + 0.4,
-					(double) randomizedLocation.getZ(),
-					(double) 1 / 24.0, 0.0, 0.0);
+			playNote(guzhengBlockEntity, world, blockPos, note);
+			// world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS,
+			// 1f, note.getPitch());
+			// BlockPos otherBlockPos =
+			// guzhengBlockEntity.getBlockEntityOfOtherPart().getPos();
+			// Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
+			// world.addParticle(ParticleTypes.NOTE,
+			// (double) randomizedLocation.getX(),
+			// (double) blockPos.getY() + 0.4,
+			// (double) randomizedLocation.getZ(),
+			// (double) 1 / 24.0, 0.0, 0.0);
 		}
 
 		if (guzhengBlockEntity.TICK_COUNT > guzhengBlockEntity.parsedScript.getLength()) {
-			guzhengBlockEntity.isPlaying = false;
-			guzhengBlockEntity.TICK_COUNT = -1;
+			// guzhengBlockEntity.isPlaying = false;
+			// guzhengBlockEntity.TICK_COUNT = -1;
+			guzhengBlockEntity.stopScript();
 		}
 
 		guzhengBlockEntity.TICK_COUNT++;
@@ -117,6 +144,7 @@ public class GuzhengBlockEntity extends BlockEntity {
 	public void readNbt(NbtCompound nbt) {
 		super.readNbt(nbt);
 		parsedScript = GuzhengSongData.fromJson(nbt.getString("script"));
+		SCRIPT = parsedScript.geScript();
 	}
 
 	@Override

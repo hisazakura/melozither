@@ -69,6 +69,11 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 
 		GuzhengBlockEntity guzhengBlockEntity = (GuzhengBlockEntity) blockEntity;
 
+		if (guzhengBlockEntity.isPlaying) {
+			guzhengBlockEntity.stopScript();
+			return ActionResult.SUCCESS;
+		}
+
 		ItemStack itemInHand = player.getStackInHand(hand);
 		if (!itemInHand.getItem().equals(Items.AIR) && (itemInHand.getItem().equals(Items.WRITABLE_BOOK)
 				|| itemInHand.getItem().equals(Items.WRITTEN_BOOK))) {

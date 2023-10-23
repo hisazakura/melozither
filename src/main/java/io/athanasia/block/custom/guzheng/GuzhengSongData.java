@@ -8,6 +8,7 @@ import java.util.List;
 import com.google.gson.Gson;
 
 public class GuzhengSongData {
+	private String script;
 	private HashMap<Integer, List<GuzhengNote>> data;
 	private int length;
 
@@ -30,6 +31,10 @@ public class GuzhengSongData {
 	public Integer getLength() {
 		if (this.length <= 0) refresh();
 		return this.length;
+	}
+
+	public String geScript() {
+		return this.script;
 	}
 
 	public void refresh() {
