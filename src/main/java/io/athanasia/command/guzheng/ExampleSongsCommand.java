@@ -32,7 +32,7 @@ public class ExampleSongsCommand {
 			return 1;
 
 		NbtString title = NbtString.of("Broken Moon");
-		NbtString author = NbtString.of("ZUN");
+		NbtString author = NbtString.of("U2 Akiyama");
 		NbtList pages = new NbtList();
 		pages.add(NbtString.of(
 				"{\"text\":\"<4>kl;e[r^v]^v[ea][r^v][tb]b[es][b;][nl][nk][de][nr][a;]^n[;n][eb][^vr]^v[ae][r^v][tb]b[ys][ub][ni][n^u]<1>[yud]^u<2>u<4>[ny][nu]n[yd][tn][^vr]^v[ta][^ve][rb]b[se][br][tn]<2>n;[ed]r<4>[en][a;]^n[n;][bl][;^v]<2>^v<1>l;<4>[ae][r^v][tb][br][sl]b[n;]ndn[ka][^nl][n;]\"}"));
