@@ -12,6 +12,5 @@ Visit the [Wiki](https://github.com/hisazakura/melozither/wiki) for usage guide.
 
 ## Roadmap
 
-- [ ] Bug test (find common bugs and fix it)
-- [ ] Stress test (test for performance)
 - [ ] Interactive web to create and convert scripts
+- [ ] Add more zither variations
