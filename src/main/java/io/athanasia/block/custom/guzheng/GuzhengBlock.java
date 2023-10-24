@@ -98,8 +98,10 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 				author = itemInHand.getNbt().getString("author");
 			}
 			String err = guzhengBlockEntity.setScript(script, title, author);
-			if (err != null)
+			if (err != null) {
 				player.sendMessage(Text.literal(err));
+				return ActionResult.SUCCESS;
+			}
 		}
 
 		guzhengBlockEntity.playScript();
