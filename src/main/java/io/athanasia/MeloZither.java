@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import io.athanasia.block.ModBlockEntities;
 import io.athanasia.block.ModBlocks;
+import io.athanasia.command.ModCommands;
 import io.athanasia.sound.ModSounds;
 import net.fabricmc.api.ModInitializer;
 
@@ -17,6 +18,7 @@ public class MeloZither implements ModInitializer{
 		ModBlocks.register();
 		ModBlockEntities.register();
 		ModSounds.register();
+		ModCommands.register();
 		
 		LOGGER.info("MeloZither initialized!");
 	}

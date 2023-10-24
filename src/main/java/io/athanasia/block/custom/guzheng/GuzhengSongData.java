@@ -8,7 +8,10 @@ import java.util.List;
 import com.google.gson.Gson;
 
 public class GuzhengSongData {
+	private String script;
 	private HashMap<Integer, List<GuzhengNote>> data;
+	private String title;
+	private String author;
 	private int length;
 
 	public GuzhengSongData() {
@@ -28,21 +31,42 @@ public class GuzhengSongData {
 	}
 
 	public Integer getLength() {
-		if (this.length <= 0) refresh();
+		if (this.length <= 0)
+			refresh();
 		return this.length;
 	}
 
+	public String geScript() {
+		return this.script;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
 	public void refresh() {
-		this.length =  Collections.max(new ArrayList<Integer>(data.keySet()));
+		this.length = Collections.max(new ArrayList<Integer>(data.keySet()));
 	}
 
 	public String toJson() {
-        Gson gson = new Gson();
-        return gson.toJson(this);
-    }
+		Gson gson = new Gson();
+		return gson.toJson(this);
+	}
 
 	public static GuzhengSongData fromJson(String json) {
-        Gson gson = new Gson();
-        return gson.fromJson(json, GuzhengSongData.class);
-    }
+		Gson gson = new Gson();
+		return gson.fromJson(json, GuzhengSongData.class);
+	}
 }

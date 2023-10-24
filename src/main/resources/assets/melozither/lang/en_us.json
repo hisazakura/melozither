@@ -1,6 +1,6 @@
 {
 	"block.melozither.guzheng": "Guzheng",
-
+	"zither.nowPlaying": "Now Playing: %s by %s",
 	"sounds.melozither.guzheng_pluck1": "Guzheng Pluck",
 	"sounds.melozither.guzheng_pluck2": "Guzheng Pluck",
 	"sounds.melozither.guzheng_pluck3": "Guzheng Pluck"
