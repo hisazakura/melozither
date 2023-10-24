@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4-DEV] - 2023-10-24
+
+- Fixed particle not synced after relog.
+- Fixed written book and add action bar message.
+- Added commands for 2 guzheng example songs.
+- Updated parser.
+
 ## [0.3-DEV] - 2023-10-16
 
 - Update Guzheng item model.
