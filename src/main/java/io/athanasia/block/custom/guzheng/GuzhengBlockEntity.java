@@ -2,6 +2,7 @@ package io.athanasia.block.custom.guzheng;
 
 import org.jetbrains.annotations.Nullable;
 
+import io.athanasia.MeloZither;
 import io.athanasia.block.ModBlockEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -22,7 +23,7 @@ import net.minecraft.world.World;
 public class GuzhengBlockEntity extends BlockEntity {
 	// default script
 	public String SCRIPT = "<8>[la]kj [ls]kj [la]k[js]g[hd]j[kd] [la]kj [ls]kj [la]k[js] [kd]   [fb]g[ha]j[ld]kl [ls]kl [la];[;s]e[;d]lk [la]kj [ls]kj [la]k[js]g[hd]j[ha]";
-	public GuzhengSongData parsedScript = GuzhengParser.parse(this.SCRIPT);
+	public GuzhengSongData SONG_DATA = GuzhengParser.parse(this.SCRIPT);
 	public int TICK_COUNT = -1;
 	public boolean isPlaying = false;
 
@@ -37,28 +38,37 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 	@Nullable
 	public String setScript(String script, @Nullable String title, @Nullable String author) {
+		return setScript(script, title, author, false);
+	}
+
+	@Nullable
+	public String setScript(String script, @Nullable String title, @Nullable String author, boolean selfOnly) {
 		String previousScript = this.SCRIPT;
 		this.SCRIPT = script;
 		try {
-			this.parsedScript = GuzhengParser.parse(this.SCRIPT);
+			this.SONG_DATA = GuzhengParser.parse(this.SCRIPT);
 		} catch (IllegalArgumentException e) {
 			this.SCRIPT = previousScript;
 			return e.getMessage();
 		}
+		if (title != null && author != null) {
+			this.SONG_DATA.setTitle(title);
+			this.SONG_DATA.setAuthor(author);
+		}
+
+		markDirty();
+
+		if (selfOnly)
+			return null;
+
 		try {
 			GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
 			if (otherBlockEntity.SCRIPT != this.SCRIPT)
-				otherBlockEntity.setScript(script);
+				otherBlockEntity.setScript(script, title, author, true);
 		} catch (NullPointerException e) {
 			this.SCRIPT = previousScript;
 			return e.getMessage();
 		}
-		if (title != null && author != null) {
-			this.parsedScript.setTitle(title);
-			this.parsedScript.setAuthor(author);
-		}
-
-		markDirty();
 
 		return null;
 	}
@@ -71,24 +81,29 @@ public class GuzhengBlockEntity extends BlockEntity {
 		BlockState blockState = world.getBlockState(blockPos);
 		GuzhengPart part = blockState.get(GuzhengBlock.PART);
 		Direction direction = blockState.get(Properties.HORIZONTAL_FACING);
+
 		if (part == GuzhengPart.FOOT)
 			return (GuzhengBlockEntity) world.getBlockEntity(blockPos.offset(direction));
 		return (GuzhengBlockEntity) world.getBlockEntity(blockPos.offset(direction.getOpposite()));
 	}
 
 	public void playScript() {
-		GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
-		if (otherBlockEntity == null)
+		GuzhengBlockEntity otherBlockEntity;
+		try {
+			otherBlockEntity = getBlockEntityOfOtherPart();
+		} catch (NullPointerException e) {
+			MeloZither.LOGGER.info("Guzheng cannot find it's neighbour block.");
 			return;
+		}
 		if (otherBlockEntity.isPlaying)
 			return;
 		isPlaying = true;
-		if (this.parsedScript.getTitle() == null || this.parsedScript.getAuthor() == null)
+		if (this.SONG_DATA.getTitle() == null || this.SONG_DATA.getAuthor() == null)
 			return;
 		for (PlayerEntity player : this.getWorld().getPlayers()) {
 			if (player.squaredDistanceTo(this.getPos().toCenterPos()) <= 16 * 16) {
-				player.sendMessage(Text.translatable("zither.nowPlaying", this.parsedScript.getTitle(),
-						this.parsedScript.getAuthor()).setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
+				player.sendMessage(Text.translatable("zither.nowPlaying", this.SONG_DATA.getTitle(),
+						this.SONG_DATA.getAuthor()).setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
 			}
 		}
 	}
@@ -138,25 +153,13 @@ public class GuzhengBlockEntity extends BlockEntity {
 		if (!guzhengBlockEntity.isPlaying)
 			return;
 
-		for (GuzhengNote note : guzhengBlockEntity.parsedScript.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
+		for (GuzhengNote note : guzhengBlockEntity.SONG_DATA.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
 			playNote(guzhengBlockEntity, world, blockPos, note);
-			// world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS,
-			// 1f, note.getPitch());
-			// BlockPos otherBlockPos =
-			// guzhengBlockEntity.getBlockEntityOfOtherPart().getPos();
-			// Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
-			// world.addParticle(ParticleTypes.NOTE,
-			// (double) randomizedLocation.getX(),
-			// (double) blockPos.getY() + 0.4,
-			// (double) randomizedLocation.getZ(),
-			// (double) 1 / 24.0, 0.0, 0.0);
 		}
 
-		if (guzhengBlockEntity.TICK_COUNT > guzhengBlockEntity.parsedScript.getLength()) {
-			// guzhengBlockEntity.isPlaying = false;
-			// guzhengBlockEntity.TICK_COUNT = -1;
+		// Stop the script after the song is completed
+		if (guzhengBlockEntity.TICK_COUNT > guzhengBlockEntity.SONG_DATA.getLength())
 			guzhengBlockEntity.stopScript();
-		}
 
 		guzhengBlockEntity.TICK_COUNT++;
 	}
@@ -164,14 +167,34 @@ public class GuzhengBlockEntity extends BlockEntity {
 	@Override
 	public void readNbt(NbtCompound nbt) {
 		super.readNbt(nbt);
-		parsedScript = GuzhengSongData.fromJson(nbt.getString("script"));
-		SCRIPT = parsedScript.geScript();
+
+		String title = nbt.getString("title");
+		String author = nbt.getString("author");
+		String script = nbt.getString("script");
+
+		String result;
+		if (title.equals("") || author.equals(""))
+			result = this.setScript(script, null, null, true);
+		else
+			result = this.setScript(script, title, author, true);
+
+		if (result != null)
+			MeloZither.LOGGER.info(result);
+
+		// SONG_DATA = GuzhengSongData.fromJson(nbt.getString("script"));
+		// SCRIPT = SONG_DATA.geScript();
 	}
 
 	@Override
 	protected void writeNbt(NbtCompound nbt) {
-		nbt.putString("script", parsedScript.toJson());
+		if (this.SONG_DATA.getAuthor() != null && this.SONG_DATA.getTitle() != null) {
+			nbt.putString("title", this.SONG_DATA.getTitle());
+			nbt.putString("author", this.SONG_DATA.getAuthor());
+		}
+		nbt.putString("script", this.SCRIPT);
 		super.writeNbt(nbt);
+		// nbt.putString("script", SONG_DATA.toJson());
+		// super.writeNbt(nbt);
 	}
 
 }
