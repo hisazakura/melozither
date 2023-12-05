@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import com.google.gson.Gson;
-
 public class GuzhengSongData {
 	private String script;
 	private HashMap<Integer, List<GuzhengNote>> data;
@@ -58,15 +56,5 @@ public class GuzhengSongData {
 
 	public void refresh() {
 		this.length = Collections.max(new ArrayList<Integer>(data.keySet()));
-	}
-
-	public String toJson() {
-		Gson gson = new Gson();
-		return gson.toJson(this);
-	}
-
-	public static GuzhengSongData fromJson(String json) {
-		Gson gson = new Gson();
-		return gson.fromJson(json, GuzhengSongData.class);
 	}
 }
