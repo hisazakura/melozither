@@ -31,6 +31,18 @@ public class GuzhengBlockEntity extends BlockEntity {
 		super(ModBlockEntities.GUZHENG_BLOCK_ENTITY, pos, state);
 	}
 
+	private GuzhengPart getPart() {
+		World world = this.getWorld();
+		if (world == null)
+			throw new NullPointerException("Something went wrong!");
+
+		BlockPos blockPos = this.getPos();
+		BlockState blockState = world.getBlockState(blockPos);
+		GuzhengPart part = blockState.get(GuzhengBlock.PART);
+
+		return part;
+	}
+
 	@Nullable
 	public String setScript(String script) {
 		return setScript(script, null, null);
@@ -38,37 +50,24 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 	@Nullable
 	public String setScript(String script, @Nullable String title, @Nullable String author) {
-		return setScript(script, title, author, false);
-	}
+		// only set the head
+		if (this.getPart() != GuzhengPart.HEAD)
+			return this.getBlockEntityOfOtherPart().setScript(script, title, author);
 
-	@Nullable
-	public String setScript(String script, @Nullable String title, @Nullable String author, boolean selfOnly) {
-		String previousScript = this.SCRIPT;
-		this.SCRIPT = script;
 		try {
-			this.SONG_DATA = GuzhengParser.parse(this.SCRIPT);
+			this.SONG_DATA = GuzhengParser.parse(script);
+			this.SCRIPT = script;
 		} catch (IllegalArgumentException e) {
-			this.SCRIPT = previousScript;
 			return e.getMessage();
 		}
+
+		// add title and author if written book
 		if (title != null && author != null) {
 			this.SONG_DATA.setTitle(title);
 			this.SONG_DATA.setAuthor(author);
 		}
 
 		markDirty();
-
-		if (selfOnly)
-			return null;
-
-		try {
-			GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
-			if (otherBlockEntity.SCRIPT != this.SCRIPT)
-				otherBlockEntity.setScript(script, title, author, true);
-		} catch (NullPointerException e) {
-			this.SCRIPT = previousScript;
-			return e.getMessage();
-		}
 
 		return null;
 	}
@@ -87,28 +86,30 @@ public class GuzhengBlockEntity extends BlockEntity {
 		return (GuzhengBlockEntity) world.getBlockEntity(blockPos.offset(direction.getOpposite()));
 	}
 
-	public void playScript() {
-		GuzhengBlockEntity otherBlockEntity;
-		try {
-			otherBlockEntity = getBlockEntityOfOtherPart();
-		} catch (NullPointerException e) {
-			MeloZither.LOGGER.info("Guzheng cannot find it's neighbour block.");
+	public void play() {
+		// only play on head
+		if (this.getPart() != GuzhengPart.HEAD) {
+			this.getBlockEntityOfOtherPart().play();
 			return;
 		}
-		if (otherBlockEntity.isPlaying)
-			return;
+
 		isPlaying = true;
+
+		// notify players
 		if (this.SONG_DATA.getTitle() == null || this.SONG_DATA.getAuthor() == null)
 			return;
+		
 		for (PlayerEntity player : this.getWorld().getPlayers()) {
 			if (player.squaredDistanceTo(this.getPos().toCenterPos()) <= 16 * 16) {
-				player.sendMessage(Text.translatable("zither.nowPlaying", this.SONG_DATA.getTitle(),
-						this.SONG_DATA.getAuthor()).setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
+				player.sendMessage(Text.translatable("zither.nowPlaying",
+						this.SONG_DATA.getTitle(),
+						this.SONG_DATA.getAuthor())
+						.setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
 			}
 		}
 	}
 
-	public void stopScript() {
+	public void stop() {
 		this.isPlaying = false;
 		this.TICK_COUNT = -1;
 	}
@@ -122,22 +123,23 @@ public class GuzhengBlockEntity extends BlockEntity {
 		return createNbt();
 	}
 
-	private static Vec3d randomizeLocation(BlockPos blockPos1, BlockPos blockPos2) {
-		if (Math.random() < 0.5)
-			return new Vec3d(
-					blockPos1.getX() + Math.random(),
-					blockPos1.getY() + Math.random(),
-					blockPos1.getZ() + Math.random());
+	private static Vec3d randomlyOffsetPositionBetween(BlockPos blockPos1, BlockPos blockPos2) {
+		if (Math.random() < 0.5) return offsetPositionRandomly(blockPos1);
+		return offsetPositionRandomly(blockPos2);
+	}
+
+	private static Vec3d offsetPositionRandomly(BlockPos pos) {
 		return new Vec3d(
-				blockPos2.getX() + Math.random(),
-				blockPos2.getY() + Math.random(),
-				blockPos2.getZ() + Math.random());
+				pos.getX() + Math.random(),
+				pos.getY() + Math.random(),
+				pos.getZ() + Math.random());
 	}
 
 	private static void playNote(GuzhengBlockEntity entity, World world, BlockPos blockPos, GuzhengNote note) {
 		world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
 		BlockPos otherBlockPos = entity.getBlockEntityOfOtherPart().getPos();
-		Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
+		// just in case otherBlockPos somehow went null
+		Vec3d randomizedLocation = (otherBlockPos != null)? randomlyOffsetPositionBetween(blockPos, otherBlockPos) : offsetPositionRandomly(blockPos);
 		world.addParticle(ParticleTypes.NOTE,
 				(double) randomizedLocation.getX(),
 				(double) blockPos.getY() + 0.4,
@@ -153,15 +155,18 @@ public class GuzhengBlockEntity extends BlockEntity {
 		if (!guzhengBlockEntity.isPlaying)
 			return;
 
+		if (guzhengBlockEntity.getPart() != GuzhengPart.HEAD)
+			return;
+
 		for (GuzhengNote note : guzhengBlockEntity.SONG_DATA.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
 			playNote(guzhengBlockEntity, world, blockPos, note);
 		}
 
+		guzhengBlockEntity.TICK_COUNT++;
+
 		// Stop the script after the song is completed
 		if (guzhengBlockEntity.TICK_COUNT > guzhengBlockEntity.SONG_DATA.getLength())
-			guzhengBlockEntity.stopScript();
-
-		guzhengBlockEntity.TICK_COUNT++;
+			guzhengBlockEntity.stop();
 	}
 
 	@Override
@@ -174,15 +179,12 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 		String result;
 		if (title.equals("") || author.equals(""))
-			result = this.setScript(script, null, null, true);
+			result = this.setScript(script, null, null);
 		else
-			result = this.setScript(script, title, author, true);
+			result = this.setScript(script, title, author);
 
 		if (result != null)
 			MeloZither.LOGGER.info(result);
-
-		// SONG_DATA = GuzhengSongData.fromJson(nbt.getString("script"));
-		// SCRIPT = SONG_DATA.geScript();
 	}
 
 	@Override
@@ -193,8 +195,6 @@ public class GuzhengBlockEntity extends BlockEntity {
 		}
 		nbt.putString("script", this.SCRIPT);
 		super.writeNbt(nbt);
-		// nbt.putString("script", SONG_DATA.toJson());
-		// super.writeNbt(nbt);
 	}
 
 }
