@@ -63,7 +63,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Override
 	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand,
 			BlockHitResult hit) {
-		// only go for the head
+		// If Guzheng is not head part then run action on the other part instead.
 		BlockEntity blockEntity = (state.get(PART) == GuzhengPart.HEAD) ? world.getBlockEntity(pos)
 				: world.getBlockEntity(
 						pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING))));
@@ -73,24 +73,31 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 
 		GuzhengBlockEntity guzhengBlockEntity = (GuzhengBlockEntity) blockEntity;
 
+		// If the Guzheng is currently playing, stop the playback.
 		if (guzhengBlockEntity.isPlaying) {
 			guzhengBlockEntity.stop();
 			return ActionResult.SUCCESS;
 		}
 
+		// Retrieve the item in the player's hand.
 		ItemStack itemInHand = player.getStackInHand(hand);
 
+		// Extract script and book metadata from the held book item.
 		Map<String, String> bookData = getBookData(itemInHand);
+
+		// Attempt to set the script and metadata on the Guzheng block.
 		String err = guzhengBlockEntity.setScript(
 				bookData.get("script"),
 				bookData.get("title"),
 				bookData.get("author"));
 
+		// If there is an error, inform the player and return.
 		if (err != null) {
 			player.sendMessage(Text.literal(err));
 			return ActionResult.SUCCESS;
 		}
 
+		// Start playing the Guzheng script.
 		guzhengBlockEntity.play();
 		return ActionResult.SUCCESS;
 	}
@@ -147,11 +154,11 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Override
 	public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState,
 			WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-		// only handle other part
+		// Only handle the other part
 		if (direction != GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING)))
 			return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
 
-		// something definitely went wrong, remove it
+		// Handle unexpected scenarios: remove the block if it's not the expected other part.
 		if (!neighborState.isOf(this) || neighborState.get(PART) == state.get(PART))
 			return Blocks.AIR.getDefaultState();
 
@@ -168,7 +175,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 		BlockPos otherPartPos = pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(guzhengPart, state.get(FACING)));
 		BlockState otherPartState = world.getBlockState(otherPartPos);
 
-		// prevent creative mode drop
+		// Prevent creative mode drop
 		if (!world.isClient
 				&& player.isCreative()
 				&& guzhengPart == GuzhengPart.FOOT
@@ -185,7 +192,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Nullable
 	@Override
 	public BlockState getPlacementState(ItemPlacementContext ctx) {
-		// sets the guzheng direction on placed
+		// Sets the guzheng direction on placed
 		Direction direction = ctx.getHorizontalPlayerFacing().rotateCounterclockwise(Axis.Y);
 		BlockPos blockPos = ctx.getBlockPos();
 		BlockPos blockPos2 = blockPos.offset(direction);
