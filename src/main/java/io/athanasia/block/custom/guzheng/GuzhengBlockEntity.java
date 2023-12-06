@@ -137,7 +137,8 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 	private static void playNote(GuzhengBlockEntity entity, World world, BlockPos blockPos, GuzhengNote note) {
 		world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
-		BlockPos otherBlockPos = entity.getBlockEntityOfOtherPart().getPos();
+		BlockEntity otherBlockEntity = entity.getBlockEntityOfOtherPart();
+		BlockPos otherBlockPos = (otherBlockEntity != null)? otherBlockEntity.getPos() : null;
 		// just in case otherBlockPos somehow went null
 		Vec3d randomizedLocation = (otherBlockPos != null)? randomlyOffsetPositionBetween(blockPos, otherBlockPos) : offsetPositionRandomly(blockPos);
 		world.addParticle(ParticleTypes.NOTE,
