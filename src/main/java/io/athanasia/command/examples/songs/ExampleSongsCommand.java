@@ -9,11 +9,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import io.athanasia.MeloZither;
 import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.suggestion.SuggestionProviders;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
 import net.minecraft.server.command.CommandManager.RegistrationEnvironment;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
