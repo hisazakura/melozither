@@ -34,7 +34,8 @@ public class GuzhengBlockEntity extends BlockEntity {
 	private GuzhengPart getPart() {
 		World world = this.getWorld();
 		if (world == null)
-			throw new NullPointerException("Something went wrong!");
+			throw new NullPointerException("Something went wrong");
+			//return GuzhengPart.HEAD; // not a good idea honestly
 
 		BlockPos blockPos = this.getPos();
 		BlockState blockState = world.getBlockState(blockPos);
@@ -48,12 +49,15 @@ public class GuzhengBlockEntity extends BlockEntity {
 		return setScript(script, null, null);
 	}
 
-	@Nullable
 	public String setScript(String script, @Nullable String title, @Nullable String author) {
 		// only set the head
 		if (this.getPart() != GuzhengPart.HEAD)
-			return this.getBlockEntityOfOtherPart().setScript(script, title, author);
+			return this.getBlockEntityOfOtherPart().setAndParseScript(script, title, author);
+		return setAndParseScript(script, title, author);
+	}
 
+	@Nullable
+	private String setAndParseScript(String script, @Nullable String title, @Nullable String author) {
 		try {
 			this.SONG_DATA = GuzhengParser.parse(script);
 			this.SCRIPT = script;
@@ -98,7 +102,7 @@ public class GuzhengBlockEntity extends BlockEntity {
 		// notify players
 		if (this.SONG_DATA.getTitle() == null || this.SONG_DATA.getAuthor() == null)
 			return;
-		
+
 		for (PlayerEntity player : this.getWorld().getPlayers()) {
 			if (player.squaredDistanceTo(this.getPos().toCenterPos()) <= 16 * 16) {
 				player.sendMessage(Text.translatable("zither.nowPlaying",
@@ -124,7 +128,8 @@ public class GuzhengBlockEntity extends BlockEntity {
 	}
 
 	private static Vec3d randomlyOffsetPositionBetween(BlockPos blockPos1, BlockPos blockPos2) {
-		if (Math.random() < 0.5) return offsetPositionRandomly(blockPos1);
+		if (Math.random() < 0.5)
+			return offsetPositionRandomly(blockPos1);
 		return offsetPositionRandomly(blockPos2);
 	}
 
@@ -138,9 +143,10 @@ public class GuzhengBlockEntity extends BlockEntity {
 	private static void playNote(GuzhengBlockEntity entity, World world, BlockPos blockPos, GuzhengNote note) {
 		world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
 		BlockEntity otherBlockEntity = entity.getBlockEntityOfOtherPart();
-		BlockPos otherBlockPos = (otherBlockEntity != null)? otherBlockEntity.getPos() : null;
+		BlockPos otherBlockPos = (otherBlockEntity != null) ? otherBlockEntity.getPos() : null;
 		// just in case otherBlockPos somehow went null
-		Vec3d randomizedLocation = (otherBlockPos != null)? randomlyOffsetPositionBetween(blockPos, otherBlockPos) : offsetPositionRandomly(blockPos);
+		Vec3d randomizedLocation = (otherBlockPos != null) ? randomlyOffsetPositionBetween(blockPos, otherBlockPos)
+				: offsetPositionRandomly(blockPos);
 		world.addParticle(ParticleTypes.NOTE,
 				(double) randomizedLocation.getX(),
 				(double) blockPos.getY() + 0.4,
@@ -174,15 +180,18 @@ public class GuzhengBlockEntity extends BlockEntity {
 	public void readNbt(NbtCompound nbt) {
 		super.readNbt(nbt);
 
+		String part = nbt.getString("part");
+		if (part == "foot") return;
+
 		String title = nbt.getString("title");
 		String author = nbt.getString("author");
 		String script = nbt.getString("script");
 
 		String result;
 		if (title.equals("") || author.equals(""))
-			result = this.setScript(script, null, null);
+			result = this.setAndParseScript(script, null, null);
 		else
-			result = this.setScript(script, title, author);
+			result = this.setAndParseScript(script, title, author);
 
 		if (result != null)
 			MeloZither.LOGGER.info(result);
@@ -190,11 +199,14 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 	@Override
 	protected void writeNbt(NbtCompound nbt) {
-		if (this.SONG_DATA.getAuthor() != null && this.SONG_DATA.getTitle() != null) {
-			nbt.putString("title", this.SONG_DATA.getTitle());
-			nbt.putString("author", this.SONG_DATA.getAuthor());
+		nbt.putString("part", (getPart() == GuzhengPart.HEAD)? "head" : "foot");
+		if (getPart() == GuzhengPart.HEAD) {
+			if (this.SONG_DATA.getAuthor() != null && this.SONG_DATA.getTitle() != null) {
+				nbt.putString("title", this.SONG_DATA.getTitle());
+				nbt.putString("author", this.SONG_DATA.getAuthor());
+			}
+			nbt.putString("script", this.SCRIPT);
 		}
-		nbt.putString("script", this.SCRIPT);
 		super.writeNbt(nbt);
 	}
 
