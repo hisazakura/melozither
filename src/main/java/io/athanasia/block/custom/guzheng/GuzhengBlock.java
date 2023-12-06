@@ -85,16 +85,18 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 		// Extract script and book metadata from the held book item.
 		Map<String, String> bookData = getBookData(itemInHand);
 
-		// Attempt to set the script and metadata on the Guzheng block.
-		String err = guzhengBlockEntity.setScript(
-				bookData.get("script"),
-				bookData.get("title"),
-				bookData.get("author"));
+		if (bookData != null) {
+			// Attempt to set the script and metadata on the Guzheng block.
+			String err = guzhengBlockEntity.setScript(
+					bookData.get("script"),
+					bookData.get("title"),
+					bookData.get("author"));
 
-		// If there is an error, inform the player and return.
-		if (err != null) {
-			player.sendMessage(Text.literal(err));
-			return ActionResult.SUCCESS;
+			// If there is an error, inform the player and return.
+			if (err != null) {
+				player.sendMessage(Text.literal(err));
+				return ActionResult.SUCCESS;
+			}
 		}
 
 		// Start playing the Guzheng script.
@@ -158,7 +160,8 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 		if (direction != GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING)))
 			return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
 
-		// Handle unexpected scenarios: remove the block if it's not the expected other part.
+		// Handle unexpected scenarios: remove the block if it's not the expected other
+		// part.
 		if (!neighborState.isOf(this) || neighborState.get(PART) == state.get(PART))
 			return Blocks.AIR.getDefaultState();
 
