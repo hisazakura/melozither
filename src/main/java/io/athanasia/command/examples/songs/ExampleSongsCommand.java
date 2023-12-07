@@ -23,10 +23,10 @@ public class ExampleSongsCommand {
 						.then(CommandManager.literal("examples")
 								.then(CommandManager.argument("id", StringArgumentType.string())
 										.suggests(ExampleSongsSuggestionProvider::getSuggestions)
-										.executes(ExampleSongsCommand::getExampleSong))));
+										.executes(ExampleSongsCommand::getExampleSongs))));
 	}
 
-	public static int getExampleSong(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+	public static int getExampleSongs(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
 		ServerPlayerEntity player = context.getSource().getPlayer();
 		if (player == null)
 			return 1;
