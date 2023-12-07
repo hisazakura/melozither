@@ -1,7 +1,8 @@
 package io.athanasia.block.custom.guzheng;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.StringJoiner;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
@@ -62,50 +63,88 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Override
 	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand,
 			BlockHitResult hit) {
-		BlockEntity blockEntity = world.getBlockEntity(pos);
+		// If Guzheng is not head part then run action on the other part instead.
+		BlockEntity blockEntity = (state.get(PART) == GuzhengPart.HEAD) ? world.getBlockEntity(pos)
+				: world.getBlockEntity(
+						pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING))));
+
 		if (!(blockEntity instanceof GuzhengBlockEntity))
 			return ActionResult.SUCCESS;
 
 		GuzhengBlockEntity guzhengBlockEntity = (GuzhengBlockEntity) blockEntity;
 
+		// If the Guzheng is currently playing, stop the playback.
 		if (guzhengBlockEntity.isPlaying) {
-			guzhengBlockEntity.stopScript();
+			guzhengBlockEntity.stop();
 			return ActionResult.SUCCESS;
 		}
 
+		// Retrieve the item in the player's hand.
 		ItemStack itemInHand = player.getStackInHand(hand);
-		if (!itemInHand.getItem().equals(Items.AIR) && (itemInHand.getItem().equals(Items.WRITABLE_BOOK)
-				|| itemInHand.getItem().equals(Items.WRITTEN_BOOK))) {
 
-			List<String> pages;
-			if (itemInHand.getItem().equals(Items.WRITABLE_BOOK))
-				pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
-						.map(NbtElement::asString)
-						.collect(Collectors.toList());
-			else
-				pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
-						.map(NbtElement::asString)
-						.map(page -> page.replace("{\"text\":\"", "").replace("\"}", ""))
-						.collect(Collectors.toList());
+		// Extract script and book metadata from the held book item.
+		Map<String, String> bookData = getBookData(itemInHand);
 
-			StringJoiner stringJoiner = new StringJoiner("");
-			pages.forEach(stringJoiner::add);
-			String script = stringJoiner.toString();
+		if (bookData != null) {
+			// Attempt to set the script and metadata on the Guzheng block.
+			String err = guzhengBlockEntity.setScript(
+					bookData.get("script"),
+					bookData.get("title"),
+					bookData.get("author"));
 
-			String title = null, author = null;
-			if (itemInHand.getItem().equals(Items.WRITTEN_BOOK)) {
-				title = itemInHand.getNbt().getString("title");
-				author = itemInHand.getNbt().getString("author");
-			}
-			String err = guzhengBlockEntity.setScript(script, title, author);
+			// If there is an error, inform the player and return.
 			if (err != null) {
 				player.sendMessage(Text.literal(err));
 				return ActionResult.SUCCESS;
 			}
 		}
 
-		guzhengBlockEntity.playScript();
+		// Start playing the Guzheng script.
+		guzhengBlockEntity.play();
 		return ActionResult.SUCCESS;
+	}
+
+	/**
+	 * Retrieves information from a writable/written book ItemStack.
+	 *
+	 * @param itemInHand The ItemStack representing the writable/written book.
+	 * @return A map containing book-related information, including the script,
+	 *         title, and author.
+	 *         The keys are "script," "title," and "author." Returns null if the
+	 *         provided ItemStack is not a valid writable/written book.
+	 */
+	@Nullable
+	private Map<String, @Nullable String> getBookData(ItemStack itemInHand) {
+		if (itemInHand.getItem().equals(Items.AIR))
+			return null;
+		if (!itemInHand.getItem().equals(Items.WRITABLE_BOOK) && !itemInHand.getItem().equals(Items.WRITTEN_BOOK))
+			return null;
+
+		List<String> pages;
+		if (itemInHand.getItem().equals(Items.WRITABLE_BOOK))
+			pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
+					.map(NbtElement::asString)
+					.collect(Collectors.toList());
+		else
+			pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
+					.map(NbtElement::asString)
+					.map(page -> page.replace("{\"text\":\"", "").replace("\"}", ""))
+					.collect(Collectors.toList());
+
+		String script = String.join("", pages);
+
+		String title = null, author = null;
+		if (itemInHand.getItem().equals(Items.WRITTEN_BOOK)) {
+			title = itemInHand.getNbt().getString("title");
+			author = itemInHand.getNbt().getString("author");
+		}
+
+		Map<String, @Nullable String> bookData = new HashMap<>();
+		bookData.put("script", script);
+		bookData.put("title", title);
+		bookData.put("author", author);
+
+		return bookData;
 	}
 
 	@Override
@@ -117,13 +156,16 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Override
 	public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState,
 			WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-		if (direction == GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING))) {
-			if (neighborState.isOf(this) && neighborState.get(PART) != state.get(PART)) {
-				return (BlockState) state;
-			}
+		// Only handle the other part
+		if (direction != GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING)))
+			return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+
+		// Handle unexpected scenarios: remove the block if it's not the expected other
+		// part.
+		if (!neighborState.isOf(this) || neighborState.get(PART) == state.get(PART))
 			return Blocks.AIR.getDefaultState();
-		}
-		return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+
+		return (BlockState) state;
 	}
 
 	private static Direction getDirectionTowardsOtherPart(GuzhengPart part, Direction direction) {
@@ -133,31 +175,36 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Override
 	public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
 		GuzhengPart guzhengPart = state.get(PART);
-		BlockPos blockPos = pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(guzhengPart, state.get(FACING)));
-		BlockState blockState = world.getBlockState(blockPos);
+		BlockPos otherPartPos = pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(guzhengPart, state.get(FACING)));
+		BlockState otherPartState = world.getBlockState(otherPartPos);
 
+		// Prevent creative mode drop
 		if (!world.isClient
 				&& player.isCreative()
 				&& guzhengPart == GuzhengPart.FOOT
-				&& blockState.isOf(this)
-				&& blockState.get(PART) == GuzhengPart.HEAD) {
-			world.setBlockState(blockPos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL | Block.SKIP_DROPS);
-			world.syncWorldEvent(player, WorldEvents.BLOCK_BROKEN, blockPos, Block.getRawIdFromState(blockState));
+				&& otherPartState.isOf(this)
+				&& otherPartState.get(PART) == GuzhengPart.HEAD) {
+			world.setBlockState(otherPartPos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL | Block.SKIP_DROPS);
+			world.syncWorldEvent(player, WorldEvents.BLOCK_BROKEN, otherPartPos,
+					Block.getRawIdFromState(otherPartState));
 		}
+
 		super.onBreak(world, pos, state, player);
 	}
 
 	@Nullable
 	@Override
 	public BlockState getPlacementState(ItemPlacementContext ctx) {
+		// Sets the guzheng direction on placed
 		Direction direction = ctx.getHorizontalPlayerFacing().rotateCounterclockwise(Axis.Y);
 		BlockPos blockPos = ctx.getBlockPos();
 		BlockPos blockPos2 = blockPos.offset(direction);
 		World world = ctx.getWorld();
-		if (world.getBlockState(blockPos2).canReplace(ctx) && world.getWorldBorder().contains(blockPos2)) {
-			return (BlockState) this.getDefaultState().with(FACING, direction);
-		}
-		return null;
+
+		if (!world.getBlockState(blockPos2).canReplace(ctx) || !world.getWorldBorder().contains(blockPos2))
+			return null;
+
+		return (BlockState) this.getDefaultState().with(FACING, direction);
 	}
 
 	@Override

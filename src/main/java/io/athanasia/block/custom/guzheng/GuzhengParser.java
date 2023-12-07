@@ -64,25 +64,25 @@ public class GuzhengParser {
 			if (character == '>') {
 				state = ParserState.PLAY;
 				if (interval == 0)
-					throw new IllegalArgumentException("Invalid interval");
+					throw new IllegalArgumentException("Invalid interval: " + interval);
 				continue;
 			}
 			if (state == ParserState.CHANGE_INTERVAL) {
 				if (!Character.isDigit(character))
-					throw new IllegalArgumentException("Invalid interval");
+					throw new IllegalArgumentException("Invalid interval:" + character);
 				interval = interval * 10 + (character - '0');
 				continue;
 			}
 			if (character == '[') {
 				if (interval == 0)
-					throw new IllegalArgumentException("Double bracket");
+					throw new IllegalArgumentException("Invalid double bracket");
 				previous_interval = interval;
 				interval = 0;
 				continue;
 			}
 			if (character == ']') {
 				if (previous_interval < 0)
-					throw new IllegalArgumentException("No opening bracket");
+					throw new IllegalArgumentException("Opening bracket not found");
 				interval = previous_interval;
 				previous_interval = -1;
 				tick += interval;

@@ -2,6 +2,7 @@ package io.athanasia.block.custom.guzheng;
 
 import org.jetbrains.annotations.Nullable;
 
+import io.athanasia.MeloZither;
 import io.athanasia.block.ModBlockEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -22,7 +23,7 @@ import net.minecraft.world.World;
 public class GuzhengBlockEntity extends BlockEntity {
 	// default script
 	public String SCRIPT = "<8>[la]kj [ls]kj [la]k[js]g[hd]j[kd] [la]kj [ls]kj [la]k[js] [kd]   [fb]g[ha]j[ld]kl [ls]kl [la];[;s]e[;d]lk [la]kj [ls]kj [la]k[js]g[hd]j[ha]";
-	public GuzhengSongData parsedScript = GuzhengParser.parse(this.SCRIPT);
+	public GuzhengSongData SONG_DATA = GuzhengParser.parse(this.SCRIPT);
 	public int TICK_COUNT = -1;
 	public boolean isPlaying = false;
 
@@ -30,32 +31,44 @@ public class GuzhengBlockEntity extends BlockEntity {
 		super(ModBlockEntities.GUZHENG_BLOCK_ENTITY, pos, state);
 	}
 
+	private GuzhengPart getPart() {
+		World world = this.getWorld();
+		if (world == null)
+			throw new NullPointerException("Something went wrong");
+			//return GuzhengPart.HEAD; // not a good idea honestly
+
+		BlockPos blockPos = this.getPos();
+		BlockState blockState = world.getBlockState(blockPos);
+		GuzhengPart part = blockState.get(GuzhengBlock.PART);
+
+		return part;
+	}
+
 	@Nullable
 	public String setScript(String script) {
 		return setScript(script, null, null);
 	}
 
-	@Nullable
 	public String setScript(String script, @Nullable String title, @Nullable String author) {
-		String previousScript = this.SCRIPT;
-		this.SCRIPT = script;
+		// only set the head
+		if (this.getPart() != GuzhengPart.HEAD)
+			return this.getBlockEntityOfOtherPart().setAndParseScript(script, title, author);
+		return setAndParseScript(script, title, author);
+	}
+
+	@Nullable
+	private String setAndParseScript(String script, @Nullable String title, @Nullable String author) {
 		try {
-			this.parsedScript = GuzhengParser.parse(this.SCRIPT);
+			this.SONG_DATA = GuzhengParser.parse(script);
+			this.SCRIPT = script;
 		} catch (IllegalArgumentException e) {
-			this.SCRIPT = previousScript;
 			return e.getMessage();
 		}
-		try {
-			GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
-			if (otherBlockEntity.SCRIPT != this.SCRIPT)
-				otherBlockEntity.setScript(script);
-		} catch (NullPointerException e) {
-			this.SCRIPT = previousScript;
-			return e.getMessage();
-		}
+
+		// add title and author if written book
 		if (title != null && author != null) {
-			this.parsedScript.setTitle(title);
-			this.parsedScript.setAuthor(author);
+			this.SONG_DATA.setTitle(title);
+			this.SONG_DATA.setAuthor(author);
 		}
 
 		markDirty();
@@ -71,29 +84,36 @@ public class GuzhengBlockEntity extends BlockEntity {
 		BlockState blockState = world.getBlockState(blockPos);
 		GuzhengPart part = blockState.get(GuzhengBlock.PART);
 		Direction direction = blockState.get(Properties.HORIZONTAL_FACING);
+
 		if (part == GuzhengPart.FOOT)
 			return (GuzhengBlockEntity) world.getBlockEntity(blockPos.offset(direction));
 		return (GuzhengBlockEntity) world.getBlockEntity(blockPos.offset(direction.getOpposite()));
 	}
 
-	public void playScript() {
-		GuzhengBlockEntity otherBlockEntity = getBlockEntityOfOtherPart();
-		if (otherBlockEntity == null)
+	public void play() {
+		// only play on head
+		if (this.getPart() != GuzhengPart.HEAD) {
+			this.getBlockEntityOfOtherPart().play();
 			return;
-		if (otherBlockEntity.isPlaying)
-			return;
+		}
+
 		isPlaying = true;
-		if (this.parsedScript.getTitle() == null || this.parsedScript.getAuthor() == null)
+
+		// notify players
+		if (this.SONG_DATA.getTitle() == null || this.SONG_DATA.getAuthor() == null)
 			return;
+
 		for (PlayerEntity player : this.getWorld().getPlayers()) {
 			if (player.squaredDistanceTo(this.getPos().toCenterPos()) <= 16 * 16) {
-				player.sendMessage(Text.translatable("zither.nowPlaying", this.parsedScript.getTitle(),
-						this.parsedScript.getAuthor()).setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
+				player.sendMessage(Text.translatable("zither.nowPlaying",
+						this.SONG_DATA.getTitle(),
+						this.SONG_DATA.getAuthor())
+						.setStyle(Style.EMPTY.withFormatting(Formatting.GREEN)), true);
 			}
 		}
 	}
 
-	public void stopScript() {
+	public void stop() {
 		this.isPlaying = false;
 		this.TICK_COUNT = -1;
 	}
@@ -107,22 +127,26 @@ public class GuzhengBlockEntity extends BlockEntity {
 		return createNbt();
 	}
 
-	private static Vec3d randomizeLocation(BlockPos blockPos1, BlockPos blockPos2) {
+	private static Vec3d randomlyOffsetPositionBetween(BlockPos blockPos1, BlockPos blockPos2) {
 		if (Math.random() < 0.5)
-			return new Vec3d(
-					blockPos1.getX() + Math.random(),
-					blockPos1.getY() + Math.random(),
-					blockPos1.getZ() + Math.random());
+			return offsetPositionRandomly(blockPos1);
+		return offsetPositionRandomly(blockPos2);
+	}
+
+	private static Vec3d offsetPositionRandomly(BlockPos pos) {
 		return new Vec3d(
-				blockPos2.getX() + Math.random(),
-				blockPos2.getY() + Math.random(),
-				blockPos2.getZ() + Math.random());
+				pos.getX() + Math.random(),
+				pos.getY() + Math.random(),
+				pos.getZ() + Math.random());
 	}
 
 	private static void playNote(GuzhengBlockEntity entity, World world, BlockPos blockPos, GuzhengNote note) {
 		world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
-		BlockPos otherBlockPos = entity.getBlockEntityOfOtherPart().getPos();
-		Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
+		BlockEntity otherBlockEntity = entity.getBlockEntityOfOtherPart();
+		BlockPos otherBlockPos = (otherBlockEntity != null) ? otherBlockEntity.getPos() : null;
+		// just in case otherBlockPos somehow went null
+		Vec3d randomizedLocation = (otherBlockPos != null) ? randomlyOffsetPositionBetween(blockPos, otherBlockPos)
+				: offsetPositionRandomly(blockPos);
 		world.addParticle(ParticleTypes.NOTE,
 				(double) randomizedLocation.getX(),
 				(double) blockPos.getY() + 0.4,
@@ -138,39 +162,51 @@ public class GuzhengBlockEntity extends BlockEntity {
 		if (!guzhengBlockEntity.isPlaying)
 			return;
 
-		for (GuzhengNote note : guzhengBlockEntity.parsedScript.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
-			playNote(guzhengBlockEntity, world, blockPos, note);
-			// world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS,
-			// 1f, note.getPitch());
-			// BlockPos otherBlockPos =
-			// guzhengBlockEntity.getBlockEntityOfOtherPart().getPos();
-			// Vec3d randomizedLocation = randomizeLocation(blockPos, otherBlockPos);
-			// world.addParticle(ParticleTypes.NOTE,
-			// (double) randomizedLocation.getX(),
-			// (double) blockPos.getY() + 0.4,
-			// (double) randomizedLocation.getZ(),
-			// (double) 1 / 24.0, 0.0, 0.0);
-		}
+		if (guzhengBlockEntity.getPart() != GuzhengPart.HEAD)
+			return;
 
-		if (guzhengBlockEntity.TICK_COUNT > guzhengBlockEntity.parsedScript.getLength()) {
-			// guzhengBlockEntity.isPlaying = false;
-			// guzhengBlockEntity.TICK_COUNT = -1;
-			guzhengBlockEntity.stopScript();
+		for (GuzhengNote note : guzhengBlockEntity.SONG_DATA.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
+			playNote(guzhengBlockEntity, world, blockPos, note);
 		}
 
 		guzhengBlockEntity.TICK_COUNT++;
+
+		// Stop the script after the song is completed
+		if (guzhengBlockEntity.TICK_COUNT > guzhengBlockEntity.SONG_DATA.getLength())
+			guzhengBlockEntity.stop();
 	}
 
 	@Override
 	public void readNbt(NbtCompound nbt) {
 		super.readNbt(nbt);
-		parsedScript = GuzhengSongData.fromJson(nbt.getString("script"));
-		SCRIPT = parsedScript.geScript();
+
+		String part = nbt.getString("part");
+		if (part == "foot") return;
+
+		String title = nbt.getString("title");
+		String author = nbt.getString("author");
+		String script = nbt.getString("script");
+
+		String result;
+		if (title.equals("") || author.equals(""))
+			result = this.setAndParseScript(script, null, null);
+		else
+			result = this.setAndParseScript(script, title, author);
+
+		if (result != null)
+			MeloZither.LOGGER.info(result);
 	}
 
 	@Override
 	protected void writeNbt(NbtCompound nbt) {
-		nbt.putString("script", parsedScript.toJson());
+		nbt.putString("part", (getPart() == GuzhengPart.HEAD)? "head" : "foot");
+		if (getPart() == GuzhengPart.HEAD) {
+			if (this.SONG_DATA.getAuthor() != null && this.SONG_DATA.getTitle() != null) {
+				nbt.putString("title", this.SONG_DATA.getTitle());
+				nbt.putString("author", this.SONG_DATA.getAuthor());
+			}
+			nbt.putString("script", this.SCRIPT);
+		}
 		super.writeNbt(nbt);
 	}
 
