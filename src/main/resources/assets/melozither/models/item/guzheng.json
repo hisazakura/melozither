@@ -1,3 +1,6 @@
 {
-	"parent": "melozither:block/guzheng"
-}
+	"model": {
+	  "type": "minecraft:model",
+	  "model": "melozither:block/guzheng"
+	}
+  }

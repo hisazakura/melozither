@@ -10,6 +10,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Style;
@@ -17,7 +19,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Direction.Axis;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.World;
 
 public class GuzhengBlockEntity extends BlockEntity {
@@ -35,7 +39,7 @@ public class GuzhengBlockEntity extends BlockEntity {
 		World world = this.getWorld();
 		if (world == null)
 			throw new NullPointerException("Something went wrong");
-			//return GuzhengPart.HEAD; // not a good idea honestly
+		// return GuzhengPart.HEAD; // not a good idea honestly
 
 		BlockPos blockPos = this.getPos();
 		BlockState blockState = world.getBlockState(blockPos);
@@ -122,9 +126,18 @@ public class GuzhengBlockEntity extends BlockEntity {
 		return BlockEntityUpdateS2CPacket.create(this);
 	}
 
-	@Override
-	public NbtCompound toInitialChunkDataNbt() {
-		return createNbt();
+	public static Vec3d getCenter(Vec3i vec) {
+		return new Vec3d(
+				(double) vec.getX() + 0.5,
+				(double) vec.getY() + 0.5,
+				(double) vec.getZ() + 0.5);
+	}
+
+	public static Vec3d getCenter(Vec3i vec1, Vec3i vec2) {
+		return new Vec3d(
+				(double) (vec1.getX() + vec2.getX()) / 2.0,
+				(double) (vec1.getY() + vec2.getY()) / 2.0,
+				(double) (vec1.getZ() + vec2.getZ()) / 2.0);
 	}
 
 	private static Vec3d randomlyOffsetPositionBetween(BlockPos blockPos1, BlockPos blockPos2) {
@@ -135,29 +148,33 @@ public class GuzhengBlockEntity extends BlockEntity {
 
 	private static Vec3d offsetPositionRandomly(BlockPos pos) {
 		return new Vec3d(
-				pos.getX() + Math.random(),
-				pos.getY() + Math.random(),
-				pos.getZ() + Math.random());
+				(double) pos.getX() + Math.random(),
+				(double) pos.getY() + Math.random(),
+				(double) pos.getZ() + Math.random());
 	}
 
-	private static void playNote(GuzhengBlockEntity entity, World world, BlockPos blockPos, GuzhengNote note) {
-		world.playSound(null, blockPos, note.getSoundEvent(), SoundCategory.BLOCKS, 1f, note.getPitch());
-		BlockEntity otherBlockEntity = entity.getBlockEntityOfOtherPart();
-		BlockPos otherBlockPos = (otherBlockEntity != null) ? otherBlockEntity.getPos() : null;
-		// just in case otherBlockPos somehow went null
-		Vec3d randomizedLocation = (otherBlockPos != null) ? randomlyOffsetPositionBetween(blockPos, otherBlockPos)
-				: offsetPositionRandomly(blockPos);
-		world.addParticle(ParticleTypes.NOTE,
-				(double) randomizedLocation.getX(),
-				(double) blockPos.getY() + 0.4,
-				(double) randomizedLocation.getZ(),
-				(double) 1 / 24.0, 0.0, 0.0);
+	private static void playNote(World world, Vec3d soundPos, Vec3d particlePos, GuzhengNote note) {
+		world.playSound(null, soundPos.getX(), soundPos.getY(), soundPos.getZ(), note.getSoundEvent(),
+				SoundCategory.BLOCKS, 1f, note.getPitch());
+		if (world instanceof ServerWorld serverWorld) {
+			serverWorld.spawnParticles(ParticleTypes.NOTE, (double) particlePos.getX(), (double) particlePos.getY(),
+					(double) particlePos.getZ(), 1, 0, 0, 0, 1 / 24.0);
+			// (double) particlePos.getX(),
+			// (double) particlePos.getY(),
+			// (double) particlePos.getZ(),
+			// (double) 1 / 24.0, 0.0, 0.0);
+		}
+
 	}
 
 	public static <E extends BlockEntity> void tick(World world, BlockPos blockPos, BlockState blockState, E entity) {
 		if (!(entity instanceof GuzhengBlockEntity))
 			return;
 		GuzhengBlockEntity guzhengBlockEntity = (GuzhengBlockEntity) entity;
+		GuzhengBlockEntity otherBlockEntity = guzhengBlockEntity.getBlockEntityOfOtherPart();
+
+		BlockPos otherBlockPos = (otherBlockEntity != null) ? otherBlockEntity.getPos() : blockPos;
+		Vec3d soundPos = getCenter(blockPos, otherBlockPos);
 
 		if (!guzhengBlockEntity.isPlaying)
 			return;
@@ -166,7 +183,9 @@ public class GuzhengBlockEntity extends BlockEntity {
 			return;
 
 		for (GuzhengNote note : guzhengBlockEntity.SONG_DATA.getNotesAtTime(guzhengBlockEntity.TICK_COUNT)) {
-			playNote(guzhengBlockEntity, world, blockPos, note);
+			Vec3d particlePos = ((otherBlockPos != null) ? randomlyOffsetPositionBetween(blockPos, otherBlockPos)
+					: offsetPositionRandomly(blockPos)).withAxis(Axis.Y, (double) blockPos.getY());
+			playNote(world, soundPos, particlePos, note);
 		}
 
 		guzhengBlockEntity.TICK_COUNT++;
@@ -177,11 +196,12 @@ public class GuzhengBlockEntity extends BlockEntity {
 	}
 
 	@Override
-	public void readNbt(NbtCompound nbt) {
-		super.readNbt(nbt);
+	public void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+		super.readNbt(nbt, registryLookup);
 
 		String part = nbt.getString("part");
-		if (part == "foot") return;
+		if (part == "foot")
+			return;
 
 		String title = nbt.getString("title");
 		String author = nbt.getString("author");
@@ -198,8 +218,8 @@ public class GuzhengBlockEntity extends BlockEntity {
 	}
 
 	@Override
-	protected void writeNbt(NbtCompound nbt) {
-		nbt.putString("part", (getPart() == GuzhengPart.HEAD)? "head" : "foot");
+	protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+		nbt.putString("part", (getPart() == GuzhengPart.HEAD) ? "head" : "foot");
 		if (getPart() == GuzhengPart.HEAD) {
 			if (this.SONG_DATA.getAuthor() != null && this.SONG_DATA.getTitle() != null) {
 				nbt.putString("title", this.SONG_DATA.getTitle());
@@ -207,7 +227,7 @@ public class GuzhengBlockEntity extends BlockEntity {
 			}
 			nbt.putString("script", this.SCRIPT);
 		}
-		super.writeNbt(nbt);
+		super.writeNbt(nbt, registryLookup);
 	}
 
 }

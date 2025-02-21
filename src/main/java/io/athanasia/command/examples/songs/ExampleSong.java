@@ -1,9 +1,14 @@
 package io.athanasia.command.examples.songs;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.WrittenBookContentComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
+import net.minecraft.text.RawFilteredPair;
+import net.minecraft.text.Text;
 
 public record ExampleSong(String id, String title, String author, String[] script) {
 	public ExampleSong(String id, String title, String author, String script) {
@@ -11,18 +16,15 @@ public record ExampleSong(String id, String title, String author, String[] scrip
 	}
 
 	public ItemStack getSongBook() {
-		NbtString title = NbtString.of(this.title);
-		NbtString author = NbtString.of(this.author);
-
-		NbtList pages = new NbtList();
+		RawFilteredPair<String> title = RawFilteredPair.of(this.title);
+		List<RawFilteredPair<Text>> pages = new ArrayList<>();
 		for (String page : script) {
-			pages.add(NbtString.of(String.format("{\"text\":\"%s\"}", page)));
+			pages.add(RawFilteredPair.of(Text.literal(page)));
 		}
 
+		WrittenBookContentComponent content = new WrittenBookContentComponent(title, author, 0, pages, false);
 		ItemStack songBook = new ItemStack(Items.WRITTEN_BOOK, 1);
-		songBook.setSubNbt("title", title);
-		songBook.setSubNbt("author", author);
-		songBook.setSubNbt("pages", pages);
+		songBook.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, content);
 
 		return songBook;
 	}

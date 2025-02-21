@@ -12,7 +12,7 @@ public class ModSounds {
 	public static final SoundEvent GUZHENG_PLUCK3 = registerSoundEvent("guzheng_pluck3");
 
 	private static SoundEvent registerSoundEvent(String name) {
-		Identifier id = new Identifier(MeloZither.MOD_ID, name);
+		Identifier id = Identifier.of(MeloZither.MOD_ID, name);
 		return Registry.register(Registries.SOUND_EVENT, id, SoundEvent.of(id));
 	}
 

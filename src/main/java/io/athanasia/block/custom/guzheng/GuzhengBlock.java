@@ -1,11 +1,14 @@
 package io.athanasia.block.custom.guzheng;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
+
+import com.mojang.serialization.MapCodec;
 import io.athanasia.block.ModBlockEntities;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
@@ -17,18 +20,19 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.WritableBookContentComponent;
+import net.minecraft.component.type.WrittenBookContentComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.state.StateManager;
-import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
@@ -43,13 +47,14 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
-import net.minecraft.world.WorldAccess;
 import net.minecraft.world.WorldEvents;
+import net.minecraft.world.WorldView;
+import net.minecraft.world.tick.ScheduledTickView;
 
 public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityProvider {
-	public static final DirectionProperty FACING = Properties.HORIZONTAL_FACING;
+	public static final MapCodec<GuzhengBlock> CODEC = Block.createCodec(GuzhengBlock::new);
 	public static final EnumProperty<GuzhengPart> PART = EnumProperty.of("part", GuzhengPart.class);
-	protected static final VoxelShape NORTH_SHAPE = Block.createCuboidShape(4.0, 0.0, 4.0, 12.0, 3.0, 16.0);
+	protected static final VoxelShape NORTH_SHAPE = Block.createCuboidShape(4.0, 0.0, 0.0, 12.0, 3.0, 16.0);
 	protected static final VoxelShape SOUTH_SHAPE = NORTH_SHAPE;
 	protected static final VoxelShape WEST_SHAPE = Block.createCuboidShape(0.0, 0.0, 4.0, 16.0, 3.0, 12.0);
 	protected static final VoxelShape EAST_SHAPE = WEST_SHAPE;
@@ -61,8 +66,36 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	}
 
 	@Override
-	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand,
-			BlockHitResult hit) {
+	protected MapCodec<? extends HorizontalFacingBlock> getCodec() {
+		return CODEC;
+	}
+
+	@Override
+	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+		// If Guzheng is not head part then run action on the other part instead.
+		BlockEntity blockEntity = (state.get(PART) == GuzhengPart.HEAD) ? world.getBlockEntity(pos)
+				: world.getBlockEntity(
+						pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING))));
+
+		if (!(blockEntity instanceof GuzhengBlockEntity))
+			return ActionResult.SUCCESS;
+
+		GuzhengBlockEntity guzhengBlockEntity = (GuzhengBlockEntity) blockEntity;
+
+		// If the Guzheng is currently playing, stop the playback.
+		if (guzhengBlockEntity.isPlaying) {
+			guzhengBlockEntity.stop();
+			return ActionResult.SUCCESS;
+		}
+
+		// Start playing the Guzheng script.
+		guzhengBlockEntity.play();
+		return ActionResult.SUCCESS;
+	}
+
+	@Override
+	public ActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player,
+			Hand hand, BlockHitResult hit) {
 		// If Guzheng is not head part then run action on the other part instead.
 		BlockEntity blockEntity = (state.get(PART) == GuzhengPart.HEAD) ? world.getBlockEntity(pos)
 				: world.getBlockEntity(
@@ -94,7 +127,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 
 			// If there is an error, inform the player and return.
 			if (err != null) {
-				player.sendMessage(Text.literal(err));
+				player.sendMessage(Text.literal(err), true);
 				return ActionResult.SUCCESS;
 			}
 		}
@@ -120,24 +153,30 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 		if (!itemInHand.getItem().equals(Items.WRITABLE_BOOK) && !itemInHand.getItem().equals(Items.WRITTEN_BOOK))
 			return null;
 
-		List<String> pages;
-		if (itemInHand.getItem().equals(Items.WRITABLE_BOOK))
-			pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
-					.map(NbtElement::asString)
+		String title = null, author = null;
+
+		List<String> pages = new ArrayList<>();
+		if (itemInHand.getItem().equals(Items.WRITABLE_BOOK)) {
+			WritableBookContentComponent content = itemInHand.getComponents()
+					.get(DataComponentTypes.WRITABLE_BOOK_CONTENT);
+			if (content == null)
+				return null;
+
+			pages = content.pages().stream().map(rawFilteredPairofStrings -> rawFilteredPairofStrings.get(false))
 					.collect(Collectors.toList());
-		else
-			pages = itemInHand.getNbt().getList("pages", NbtElement.STRING_TYPE).stream()
-					.map(NbtElement::asString)
-					.map(page -> page.replace("{\"text\":\"", "").replace("\"}", ""))
-					.collect(Collectors.toList());
+		}
+		if (itemInHand.getItem().equals(Items.WRITTEN_BOOK)) {
+			WrittenBookContentComponent content = itemInHand.getComponents()
+					.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
+			if (content == null)
+				return null;
+
+			pages = content.getPages(false).stream().map(text -> text.getString()).collect(Collectors.toList());
+			title = content.title().get(false);
+			author = content.author();
+		}
 
 		String script = String.join("", pages);
-
-		String title = null, author = null;
-		if (itemInHand.getItem().equals(Items.WRITTEN_BOOK)) {
-			title = itemInHand.getNbt().getString("title");
-			author = itemInHand.getNbt().getString("author");
-		}
 
 		Map<String, @Nullable String> bookData = new HashMap<>();
 		bookData.put("script", script);
@@ -152,13 +191,19 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 		world.playSound(null, pos, SoundEvents.BLOCK_NOTE_BLOCK_BANJO.value(), SoundCategory.BLOCKS, 1f, 1.414214f);
 	}
 
-	@SuppressWarnings("deprecation")
 	@Override
-	public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState,
-			WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+	public BlockState getStateForNeighborUpdate(
+			BlockState state,
+			WorldView world,
+			ScheduledTickView tickView,
+			BlockPos pos,
+			Direction direction,
+			BlockPos neighborPos,
+			BlockState neighborState,
+			Random random) {
 		// Only handle the other part
 		if (direction != GuzhengBlock.getDirectionTowardsOtherPart(state.get(PART), state.get(FACING)))
-			return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
+			return super.getStateForNeighborUpdate(state, world, tickView, pos, direction, neighborPos, neighborState, random);
 
 		// Handle unexpected scenarios: remove the block if it's not the expected other
 		// part.
@@ -173,7 +218,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	}
 
 	@Override
-	public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+	public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
 		GuzhengPart guzhengPart = state.get(PART);
 		BlockPos otherPartPos = pos.offset(GuzhengBlock.getDirectionTowardsOtherPart(guzhengPart, state.get(FACING)));
 		BlockState otherPartState = world.getBlockState(otherPartPos);
@@ -189,7 +234,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 					Block.getRawIdFromState(otherPartState));
 		}
 
-		super.onBreak(world, pos, state, player);
+		return super.onBreak(world, pos, state, player);
 	}
 
 	@Nullable
@@ -210,19 +255,12 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	@Override
 	public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
 		Direction direction = GuzhengBlock.getOppositePartDirection(state).getOpposite();
-		switch (direction) {
-			case NORTH: {
-				return NORTH_SHAPE;
-			}
-			case SOUTH: {
-				return SOUTH_SHAPE;
-			}
-			case WEST: {
-				return WEST_SHAPE;
-			}
-			default:
-				return EAST_SHAPE;
-		}
+		return switch (direction) {
+			case NORTH -> NORTH_SHAPE.asCuboid();
+			case SOUTH -> SOUTH_SHAPE.asCuboid();
+			case WEST -> WEST_SHAPE.asCuboid();
+			default -> EAST_SHAPE.asCuboid();
+		};
 	}
 
 	public static Direction getOppositePartDirection(BlockState state) {
@@ -231,7 +269,8 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	}
 
 	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-		builder.add(FACING, PART);
+		builder.add(Properties.HORIZONTAL_FACING);
+		builder.add(PART);
 	}
 
 	@Override
@@ -254,7 +293,7 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 	}
 
 	@Override
-	public boolean canPathfindThrough(BlockState state, BlockView world, BlockPos pos, NavigationType type) {
+	public boolean canPathfindThrough(BlockState state, NavigationType type) {
 		return false;
 	}
 
@@ -277,4 +316,5 @@ public class GuzhengBlock extends HorizontalFacingBlock implements BlockEntityPr
 			return null;
 		return GuzhengBlockEntity::tick;
 	}
+
 }
