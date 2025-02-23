@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5-DEV] - 2025-2-21
+
+- Port to 1.21.4.
+- Fixed voxel shape.
+- Fixed audio sound not getting softer by distance.
+
 ## [0.4-DEV] - 2023-10-24
 
 - Fixed particle not synced after relog.
